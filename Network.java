@@ -76,14 +76,28 @@ public class Network {
 						}
 					}
 					
+					boolean present = false;
+					
 					if (trip_id.equals(lastTrip_id)) {
-						listEdges.add(new Edge(lastStation_id, station_id));
+						for (int i = 0; i < listEdges.size(); i++) {
+							int id_aa = listEdges.get(i).getStation1_id();
+							int id_ab = listEdges.get(i).getStation2_id();
+							if (((id_aa == station_id && id_ab == lastStation_id) || (id_ab == station_id && id_aa == lastStation_id))) {
+								present = true;
+								break;
+							}
+						}
+						if (present == false) {
+							listEdges.add(new Edge(lastStation_id, station_id));
+						}
 					}
+					
 					
 					lastStation_id = station_id;
 					lastTrip_id = trip_id;
 					lastStation = station;
 				}
+				
 			}
 			
 			
