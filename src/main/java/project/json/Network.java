@@ -22,6 +22,7 @@ public class Network {
 		
 
 		List<Station> listStations = new ArrayList<Station>();
+		List<Edge> listEdges = new ArrayList<Edge>();
 		
 		try {
 			
@@ -33,11 +34,14 @@ public class Network {
 			while ((nextRecord = csvReader.readNext()) != null) {
 
 				int id = Integer.parseInt(nextRecord[0]);
-				String name = toFormat(nextRecord[2]);
+				String name = nextRecord[2];
 				double lat = Double.parseDouble(nextRecord[4]);
 				double lon = Double.parseDouble(nextRecord[5]);
 				
-				listStations.add(new Station(id, name, lat, lon));
+				if (!(name.toUpperCase() == name)) {
+					listStations.add(new Station(id, name, lat, lon));
+				}
+				
 			} 
 			
 			List<Station> listStationsWithoutDuplicate = deleteDuplicates(listStations);
@@ -49,10 +53,10 @@ public class Network {
 				filereader = new FileReader(file);
 				csvReader = new CSVReader(filereader, ',', '\"', 1);
 				
-				List<Edge> listEdge = new ArrayList<Edge>();
 				int station_id = 0, lastStation_id = 0;
 				Long trip_id = 0L, lastTrip_id = 0L;
 				Station station = new Station(), lastStation = new Station();
+				String station_name = "";
 				
 				while ((nextRecord = csvReader.readNext()) != null) {
 					trip_id = Long.parseLong(nextRecord[0]);
@@ -60,12 +64,20 @@ public class Network {
 
 					for (int i = 0; i < listStations.size(); i++) {
 						if (listStations.get(i).getId() == station_id) {
-							station = listStations.get(i);
+							station_name = listStations.get(i).getName();
+							break;
 						}
 					}
 					
-					if (trip_id == lastTrip_id) {
-						listEdge.add(new Edge(lastStation, station));
+					for (int i = 0; i < listStationsWithoutDuplicate.size(); i++) {
+						if (listStations.get(i).getName().equals(station_name)) {
+							station = listStations.get(i);
+							break;
+						}
+					}
+					
+					if (trip_id.equals(lastTrip_id)) {
+						listEdges.add(new Edge(lastStation_id, station_id));
 					}
 					
 					lastStation_id = station_id;
@@ -80,10 +92,7 @@ public class Network {
 			e.printStackTrace(); 
 		} 
 		
-		
-		
-		
-		this.edges = edges;
+		this.edges = listEdges;
 	}
 	
 	public Network(File jsonFile1, File jsonFile2) {
@@ -126,22 +135,6 @@ public class Network {
 		return tmp;
 		
 		
-	}
-
-
-	private String toFormat(String str) {
-		str = str.toUpperCase();
-		char[] chars = str.toCharArray();
-			for(char c:chars){
-				switch(c) {
-				case 'À' : case 'Â' : c = 'A';
-				case 'É' : case 'È' : case 'Ê' : c = 'E';
-				case 'Î' : c = 'I';
-				case 'Ô' : c = 'O';
-				}
-			}
-		str = new String(chars);
-		return str;
 	}
 	
 	public void writeToJson() {
