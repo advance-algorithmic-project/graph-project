@@ -77,7 +77,7 @@ public class Network {
 					}
 					
 					if (trip_id.equals(lastTrip_id)) {
-						listEdges.add(new Edge(lastStation, station));
+						listEdges.add(new Edge(lastStation_id, station_id));
 					}
 					
 					lastStation_id = station_id;
@@ -91,9 +91,6 @@ public class Network {
 		catch (Exception e) { 
 			e.printStackTrace(); 
 		} 
-		
-		
-		System.out.println(listEdges);
 		
 		this.edges = listEdges;
 	}
