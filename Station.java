@@ -1,20 +1,25 @@
 package project.json;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Station {
 	private int id;
 	private String name;
-	private double longitud;
-	private double latitud;
-	
-	public Station() {
-
-	}
-	
-	public Station(int id, String name, double longitud, double latitud) {
+	private double longitude;
+	private double latitude;
+	private List<Integer> otherids; // Should always be sorted unless another program alters data position
+		
+	public Station(int id, String name, double longitude, double latitude) {
 		this.id = id;
 		this.name = name;
-		this.longitud = longitud;
-		this.latitud = latitud;
+		this.longitude = longitude;
+		this.latitude = latitude;
+		this.otherids = new ArrayList<Integer>();
+		addOtherId(id);
+	}
+
+	public Station() {
 	}
 
 	public int getId() {
@@ -33,20 +38,41 @@ public class Station {
 		this.name = name;
 	}
 
-	public double getLongitud() {
-		return longitud;
+	public double getLongitude() {
+		return longitude;
 	}
 
-	public void setLongitud(double longitud) {
-		this.longitud = longitud;
+	public void setLongitude(double longitude) {
+		this.longitude = longitude;
 	}
 
-	public double getLatitud() {
-		return latitud;
+	public double getLatitude() {
+		return latitude;
 	}
 
-	public void setLatitud(double latitud) {
-		this.latitud = latitud;
+	public void setLatitude(double latitude) {
+		this.latitude = latitude;
+	}
+	
+	public List<Integer> getOtherids() {
+		return otherids;
+	}
+	
+	public void setOtherids(List<Integer> otherids) {
+		this.otherids = otherids;
+	}
+	
+	public void addOtherId(int id) {
+		this.otherids.add(id);
+		this.otherids.sort(null);
+	}
+	
+	public boolean containsId(int id) {
+		return this.otherids.contains(id);
+	}
+	
+	public void updateId() {
+		this.id = this.otherids.get(0);
 	}
 
 }

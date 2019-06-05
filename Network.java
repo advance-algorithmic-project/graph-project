@@ -10,71 +10,52 @@ import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.opencsv.CSVReader;
 
 public class Network {
 	
-	private List<Station> stations;
+	private List<Station> stations = new ArrayList<Station>();
 	private List<Edge> edges;
 	
-	
-	public Network(File stationFile, List<File> lineFiles) {
-		
-
-		List<Station> listStations = new ArrayList<Station>();
+	public Network(List<File> stationFile, List<File> lineFiles) {
 		List<Edge> listEdges = new ArrayList<Edge>();
+		FileReader filereader;
+		CSVReader csvReader;
+		String[] nextRecord;
 		
 		try {
+			System.out.println("Reading stops file...");
+			for(File file : stationFile) {
+				System.out.println(file);
+				filereader = new FileReader(file);
+				csvReader = new CSVReader(filereader, ',', '\"', 1);
+				while ((nextRecord = csvReader.readNext()) != null) {
+					int id = Integer.parseInt(nextRecord[0]);
+					String name = nextRecord[2];
+					double lat = Double.parseDouble(nextRecord[4]);
+					double lon = Double.parseDouble(nextRecord[5]);
+					if(!(name.toUpperCase() == name)&&!(joinIdStationOnName(name, id))){
+						this.stations.add(new Station(id, name, lat, lon));
+					}
+				} 
+			}
 			
-			FileReader filereader = new FileReader(stationFile);
-
-			CSVReader csvReader = new CSVReader(filereader, ',', '\"', 1);
-			String[] nextRecord; 
-			
-			while ((nextRecord = csvReader.readNext()) != null) {
-
-				int id = Integer.parseInt(nextRecord[0]);
-				String name = nextRecord[2];
-				double lat = Double.parseDouble(nextRecord[4]);
-				double lon = Double.parseDouble(nextRecord[5]);
-				
-				if (!(name.toUpperCase() == name)) {
-					listStations.add(new Station(id, name, lat, lon));
-				}
-				
-			} 
-			
-			List<Station> listStationsWithoutDuplicate = deleteDuplicates(listStations);
-			this.stations = listStationsWithoutDuplicate;
-			
+			System.out.println("Reading lines file...");
 			for (File file : lineFiles) {
-
 				System.out.println(file);
 				filereader = new FileReader(file);
 				csvReader = new CSVReader(filereader, ',', '\"', 1);
 				
-				int station_id = 0, lastStation_id = 0;
+				int station_id = 0;
 				Long trip_id = 0L, lastTrip_id = 0L;
 				Station station = new Station(), lastStation = new Station();
-				String station_name = "";
 				
 				while ((nextRecord = csvReader.readNext()) != null) {
 					trip_id = Long.parseLong(nextRecord[0]);
 					station_id = Integer.parseInt(nextRecord[3]);
 
-					for (int i = 0; i < listStations.size(); i++) {
-						if (listStations.get(i).getId() == station_id) {
-							station_name = listStations.get(i).getName();
-							break;
-						}
-					}
-					
-					for (int i = 0; i < listStationsWithoutDuplicate.size(); i++) {
-						if (listStations.get(i).getName().equals(station_name)) {
-							station = listStations.get(i);
-							break;
-						}
-					}
+					station = getStation(station_id);
 					
 					boolean present = false;
 					
@@ -82,30 +63,27 @@ public class Network {
 						for (int i = 0; i < listEdges.size(); i++) {
 							int id_aa = listEdges.get(i).getStation1_id();
 							int id_ab = listEdges.get(i).getStation2_id();
-							if (((id_aa == station_id && id_ab == lastStation_id) || (id_ab == station_id && id_aa == lastStation_id))) {
+							if ((station.containsId(id_aa) && lastStation.containsId(id_ab)) || (station.containsId(id_ab) && lastStation.containsId(id_aa))) {
 								present = true;
 								break;
 							}
 						}
 						if (present == false) {
-							listEdges.add(new Edge(lastStation_id, station_id));
+							double weight = Math.sqrt(Math.pow(station.getLatitude()-lastStation.getLatitude(), 2) +
+														Math.pow(station.getLongitude()-lastStation.getLongitude(), 2));
+							listEdges.add(new Edge(lastStation.getId(), station.getId(), weight));
 						}
 					}
-					
-					
-					lastStation_id = station_id;
 					lastTrip_id = trip_id;
 					lastStation = station;
 				}
 				
 			}
-			
-			
+
 		} 
 		catch (Exception e) { 
 			e.printStackTrace(); 
 		} 
-		
 		this.edges = listEdges;
 	}
 	
@@ -128,7 +106,6 @@ public class Network {
 
 
 	private List<Station> deleteDuplicates(List<Station> listStations) {
-		
 		List<String> stationNames = new ArrayList<String>();
 		for (int i = 0; i < listStations.size(); i++) {
 			String name = listStations.get(i).getName();
@@ -136,7 +113,6 @@ public class Network {
 				stationNames.add(name);
 			}
 		}
-		
 		List<Station> tmp = new ArrayList<Station>();
 		for (int i = 0; i < stationNames.size(); i++) {
 			for (int j = 0; j < listStations.size(); j++) {
@@ -145,14 +121,21 @@ public class Network {
 				}
 			}
 		}
-		
 		return tmp;
-		
-		
 	}
 	
-	public void writeToJson() {
-		
+	private boolean joinIdStationOnName(String stationName, int id) {
+		for(int i=0; i<this.stations.size() ; i++) {
+			if(stationName.equals(this.stations.get(i).getName())) {
+				this.stations.get(i).addOtherId(id);
+				this.stations.get(i).updateId();
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public void writeToJson() {	
 		ObjectMapper objectMapper = new ObjectMapper();
 		try {
 			objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File("edges.json"), this.edges);
@@ -169,6 +152,23 @@ public class Network {
 		}
 	}
 	
+	public Station getStation(int stationid) {
+		for (int i = 0; i < this.stations.size(); i++) {
+			if (this.stations.get(i).containsId(stationid)) {
+				return this.stations.get(i);
+			}
+		}
+		System.out.println("/!\\ WARNING: A station has not been found, check if there is any abnomality");
+		return null;
+	}
 	
+	public Station getStation(String stationName) {
+		for (int i=0; i<this.stations.size(); i++) {
+			if(stationName.equals(this.stations.get(i).getName())) {
+				return this.stations.get(i);
+			}
+		}
+		return null;
+	}
 
 }

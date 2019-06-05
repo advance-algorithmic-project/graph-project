@@ -7,12 +7,39 @@ import java.util.List;
 public class Main {
 
 	public static void main(String[] args) {
-
-		File file = new File("RATP_GTFS_FULL/stops.txt");
+		Network paris = GTFS();
+		paris.writeToJson();
 		
+		//Network net = new Network(new File("stations.json"), new File("edges.json"));
+		System.out.println("Finished!");
+		//ToFile.readDataLineByLine(file); 
+	}
+	
+	
+	public static Network GTFS() {
+		List<File> stopsFiles = new ArrayList<File>();
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_1/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_2/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_3/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_3b/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_4/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_5/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_6/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_7/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_7b/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_8/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_9/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_10/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_11/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_12/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_13/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_14/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_Fun/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_Orv/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_RER_A/stops.txt"));
+		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_RER_B/stops.txt"));
 		
 		List<File> lineFiles = new ArrayList<File>();
-
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_1/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_2/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_3/stop_times.txt"));
@@ -34,12 +61,7 @@ public class Main {
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_RER_A/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_RER_B/stop_times.txt"));
 		
-		Network paris = new Network(file, lineFiles);
-		paris.writeToJson();
-		
-		Network net = new Network(new File("stations.json"), new File("edges.json"));
-		
-		//ToFile.readDataLineByLine(file); 
+		return new Network(stopsFiles,lineFiles);
 	}
-
+	
 }
