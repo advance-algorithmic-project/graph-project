@@ -8,11 +8,12 @@ public class Main {
 
 	public static void main(String[] args) {
 		Network paris = GTFS();
-		paris.writeToJson();
+		//paris.writeToJson();
 		
-		//Network net = new Network(new File("stations.json"), new File("edges.json"));
+		//Network paris = new Network(new File("stations.json"), new File("edges.json"));
 		System.out.println("Finished!");
-		//ToFile.readDataLineByLine(file); 
+		
+		System.out.println("The diameter of the graph is " + paris.diameter());
 	}
 	
 	

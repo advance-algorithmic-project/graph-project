@@ -15,7 +15,7 @@ public class Edge {
 	public Edge(int station1_id, int station2_id, double weight) {
 		this.station1_id = station1_id;
 		this.station2_id = station2_id;
-		this.setWeight(weight);
+		this.weight = weight;
 	}
 
 	public int getStation1_id() {

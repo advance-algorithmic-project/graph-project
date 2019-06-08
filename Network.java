@@ -4,10 +4,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -90,8 +92,9 @@ public class Network {
 	public Network(File jsonFile1, File jsonFile2) {
 		try {
 			ObjectMapper objectMapper = new ObjectMapper();
-			this.stations = objectMapper.readValue(jsonFile1, List.class);
-			this.edges = objectMapper.readValue(jsonFile1, List.class);
+			this.stations = objectMapper.readValue(jsonFile1, new TypeReference<List<Station>>(){});
+			this.edges = objectMapper.readValue(jsonFile2, new TypeReference<List<Edge>>(){});
+			//this.edges = Arrays.asList(objectMapper.readValue(jsonFile2, Edge[].class));
 		} catch (JsonParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -169,6 +172,74 @@ public class Network {
 			}
 		}
 		return null;
+	}
+	
+	public List<Integer> neighbors (int stationId) {
+		List<Integer> neighbors = new ArrayList<Integer>();
+		for (Edge edge : this.edges) {
+			if (edge.getStation1_id() == stationId) {
+				neighbors.add(edge.getStation2_id());
+			}
+			if (edge.getStation2_id() == stationId) {
+				neighbors.add(edge.getStation1_id());
+			}
+		}
+		return neighbors;
+	}
+	
+	public int bfs(int startId, int targetId) {
+		LinkedList<Integer> queue = new LinkedList<Integer>();
+		List<Pair> distances = new ArrayList<Pair>();
+		
+		queue.add(startId);
+		distances.add(new Pair(startId, 0));
+		
+		while(!queue.isEmpty()) {
+			int currentId = queue.poll();
+			int currentDistance = -1;
+
+			for (int i = 0; i < distances.size(); i++) {
+				if(distances.get(i).getId() == currentId) {
+					currentDistance = distances.get(i).getDistance();
+				}
+			}
+			for (int neighborId : this.neighbors(currentId)) {
+				
+				if (neighborId == targetId) {
+					return currentDistance + 1;
+				}
+				//Cherche si la station a déjà été visitée
+				boolean visited = false;
+				for (int i = 0; i < distances.size(); i++) {
+					if (distances.get(i).getId() == neighborId) {
+						visited = true;
+						break;
+					}
+				}
+				if (visited == false) {
+					distances.add(new Pair(neighborId, currentDistance + 1));
+					queue.add(neighborId);
+				}
+			}
+		}
+		return -1;
+		
+	}
+	
+	public int diameter() {
+		int diameter = -1;
+		for (int i = 0; i < this.stations.size(); i++) {
+			for (int j = 0; j < this.stations.size(); j++) {
+				if (i != j) {
+
+					int distance = this.bfs(this.stations.get(i).getId(), this.stations.get(j).getId());
+					if (distance > diameter) {
+						diameter = distance;
+					}
+				}
+			}
+		}
+		return diameter;
 	}
 
 }
