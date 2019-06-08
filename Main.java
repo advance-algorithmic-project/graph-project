@@ -9,11 +9,14 @@ public class Main {
 	public static void main(String[] args) {
 		Network paris = GTFS();
 		//paris.writeToJson();
+		System.out.println(paris.getStation(2035).getName());
+		System.out.println(paris.getStation(1642).getName());
+		System.out.println(paris.djikstra(2035, 1642));
 		
 		//Network paris = new Network(new File("stations.json"), new File("edges.json"));
 		System.out.println("Finished!");
 		
-		System.out.println("The diameter of the graph is " + paris.diameter());
+		//System.out.println("The diameter of the graph is " + paris.diameter());
 	}
 	
 	

@@ -3,16 +3,19 @@ package project.json;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.TreeSet;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.opencsv.CSVReader;
 
 public class Network {
@@ -165,6 +168,17 @@ public class Network {
 		return null;
 	}
 	
+	public Edge getEdge(int idA, int idB) {
+		for(Edge edge : this.edges) {
+			if((edge.getStation1_id()==idA && edge.getStation2_id()==idB) ||
+					(edge.getStation1_id()==idB && edge.getStation2_id()==idA)) {
+				return edge;
+			}
+		}
+		System.out.println("Error in getEdge function: could not find the edge \"" + idA + " / " + idB);
+		return null;
+	}
+	
 	public Station getStation(String stationName) {
 		for (int i=0; i<this.stations.size(); i++) {
 			if(stationName.equals(this.stations.get(i).getName())) {
@@ -224,6 +238,49 @@ public class Network {
 		}
 		return -1;
 		
+	}
+	
+	public double djikstra(int start, int dest) {
+		HashSet<Integer> unvisitedIds = new HashSet<Integer>();
+		for(int i=0; i<this.stations.size(); i++) {
+			unvisitedIds.add(this.stations.get(i).getId());
+		}
+		
+		HashMap<Integer, Double> distances = new HashMap<Integer, Double>();
+		for(int i=0; i<this.stations.size(); i++) {
+			distances.put(this.stations.get(i).getId(), Double.MAX_VALUE);
+		}
+		distances.put(start, 0.0);
+		
+		LinkedList<Integer> queue = new LinkedList<Integer>();
+		
+		queue.add(start);
+		
+		while(!queue.isEmpty()) {
+			int extractedStationId = queue.poll();
+			
+			if(unvisitedIds.contains(extractedStationId)) {
+				unvisitedIds.remove(extractedStationId);
+				
+				for(int neighborId : this.neighbors(extractedStationId)) {
+					Edge edge = getEdge(extractedStationId, neighborId);
+					
+					if(unvisitedIds.contains(neighborId)) {
+						double currentDistance = distances.get(neighborId);
+						double newDistance = distances.get(extractedStationId) + edge.getWeight();
+						
+						if(newDistance < currentDistance) {
+							queue.add(neighborId);
+							distances.put(neighborId, newDistance);
+						}
+					}
+					if(neighborId==dest) {
+						return distances.get(dest);
+					}
+				}
+			}
+		}
+		return -1;
 	}
 	
 	public int diameter() {
