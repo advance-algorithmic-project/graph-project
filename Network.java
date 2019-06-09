@@ -5,6 +5,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -33,11 +35,14 @@ public class Network {
 			System.out.println("Reading stops file...");
 			for(File file : stationFile) {
 				System.out.println(file);
+				String line = String.valueOf(file).replaceAll("_","");
+				line = line.replaceAll("RATPGTFS", "");
+				line = line.split("\\\\")[1];
 				filereader = new FileReader(file);
 				csvReader = new CSVReader(filereader, ',', '\"', 1);
 				while ((nextRecord = csvReader.readNext()) != null) {
 					int id = Integer.parseInt(nextRecord[0]);
-					String name = nextRecord[2];
+					String name = nextRecord[2] + " [" + line + "]";
 					double lat = Double.parseDouble(nextRecord[4]);
 					double lon = Double.parseDouble(nextRecord[5]);
 					if(!(name.toUpperCase() == name)&&!(joinIdStationOnName(name, id))){
@@ -54,37 +59,61 @@ public class Network {
 				
 				int station_id = 0;
 				Long trip_id = 0L, lastTrip_id = 0L;
+				int time;
 				Station station = new Station(), lastStation = new Station();
 				
 				while ((nextRecord = csvReader.readNext()) != null) {
 					trip_id = Long.parseLong(nextRecord[0]);
+					time = Integer.parseInt(nextRecord[1].substring(0, 2));
 					station_id = Integer.parseInt(nextRecord[3]);
-
-					station = getStation(station_id);
 					
-					boolean present = false;
-					
-					if (trip_id.equals(lastTrip_id)) {
-						for (int i = 0; i < listEdges.size(); i++) {
-							int id_aa = listEdges.get(i).getStation1_id();
-							int id_ab = listEdges.get(i).getStation2_id();
-							if ((station.containsId(id_aa) && lastStation.containsId(id_ab)) || (station.containsId(id_ab) && lastStation.containsId(id_aa))) {
-								present = true;
-								break;
+					if(time>=8 && time<=22 && station_id!=8433) {
+						station = getStation(station_id);
+						
+						boolean present = false;
+						
+						if (trip_id.equals(lastTrip_id)) {
+							for (int i = 0; i < listEdges.size(); i++) {
+								Edge edge = listEdges.get(i);
+								if ((edge.getStation1_id()==lastStation.getId() && edge.getStation2_id()==station.getId()) ||
+										(edge.getStation1_id()==station.getId() && edge.getStation2_id()==lastStation.getId())) {
+									present = true;
+									break;
+								}
+							}
+							double weight = Math.sqrt(Math.pow(station.getLatitude()-lastStation.getLatitude(), 2) +
+									Math.pow(station.getLongitude()-lastStation.getLongitude(), 2));
+							if(!present) {
+								if(Arrays.asList(1818, 1817, 2346, 2004, 2193,
+										2256, 2354, 1903, 2299, 2026).contains(station_id)) {
+									listEdges.add(new Edge(lastStation.getId(), station.getId(), weight));
+								}
+								else {
+									listEdges.add(new Edge(lastStation.getId(), station.getId(), weight));
+									listEdges.add(new Edge(station.getId(), lastStation.getId(), weight));
+								}
 							}
 						}
-						if (present == false) {
-							double weight = Math.sqrt(Math.pow(station.getLatitude()-lastStation.getLatitude(), 2) +
-														Math.pow(station.getLongitude()-lastStation.getLongitude(), 2));
-							listEdges.add(new Edge(lastStation.getId(), station.getId(), weight));
+						lastTrip_id = trip_id;
+						lastStation = station;
+					}
+				}
+			}
+			// Transition de lignes (même station)
+			System.out.println("Adding transit...");
+			for(Station s : this.stations) {
+				String name = s.getName().replaceAll("\\[\\w*\\]", "");
+				for(Station same : fetchSameStation(name)) {
+					double weight = Math.sqrt(Math.pow(s.getLatitude()-same.getLatitude(), 2) +
+							Math.pow(s.getLongitude()-same.getLongitude(), 2));
+					if(weight!=0) {
+						Edge edge = new Edge(s.getId(), same.getId(), weight);
+						if(!listEdges.contains(edge)) {
+							listEdges.add(edge);
 						}
 					}
-					lastTrip_id = trip_id;
-					lastStation = station;
 				}
-				
 			}
-
 		} 
 		catch (Exception e) { 
 			e.printStackTrace(); 
@@ -119,6 +148,16 @@ public class Network {
 			}
 		}
 		return false;
+	}
+	
+	private List<Station> fetchSameStation(String name) {
+		List<Station> res = new ArrayList<Station>();
+		for(Station s : this.stations) {
+			if(s.getName().replaceAll("\\[\\w*\\]", "").equals(name)) {
+				res.add(s);
+			}
+		}
+		return res;
 	}
 	
 	public void writeToJson() {	
@@ -173,8 +212,6 @@ public class Network {
 		for (Edge edge : this.edges) {
 			if (edge.getStation1_id() == stationId) {
 				neighbors.add(edge.getStation2_id());
-			} else if (edge.getStation2_id() == stationId) {
-				neighbors.add(edge.getStation1_id());
 			}
 		}
 		return neighbors;
@@ -221,7 +258,7 @@ public class Network {
 		return new ArrayList<Integer>();
 	}
 	
-	public double djikstra(int start, int dest) {
+	public List djikstra(int start, int dest) {
 		HashSet<Integer> unvisitedIds = new HashSet<Integer>();
 		for(int i=0; i<this.stations.size(); i++) {
 			unvisitedIds.add(this.stations.get(i).getId());
@@ -233,15 +270,26 @@ public class Network {
 		}
 		distances.put(start, 0.0);
 		
-		LinkedList<Integer> queue = new LinkedList<Integer>();
+		TreeSet queue = new TreeSet(new PairComparator());
+		queue.add(new SimpleEntry(distances.get(start), start));
 		
-		queue.add(start);
+		HashMap<Double, List<Integer>> pathes = new HashMap<Double, List<Integer>>();
+		List<Integer> firstList = new ArrayList<Integer>();
+		firstList.add(start);
+		pathes.put(0.0, firstList);
 		
 		while(!queue.isEmpty()) {
-			int extractedStationId = queue.poll();
+			SimpleEntry extractedPair = (SimpleEntry) queue.pollFirst();
+			int extractedStationId = (Integer) extractedPair.getValue();
+			
+			List<Integer> currentPath = pathes.get(distances.get(extractedStationId));
 			
 			if(unvisitedIds.contains(extractedStationId)) {
 				unvisitedIds.remove(extractedStationId);
+				
+				if(!unvisitedIds.contains(dest)) {
+					return pathes.get(distances.get(dest));
+				}
 				
 				for(int neighborId : this.neighbors(extractedStationId)) {
 					Edge edge = getEdge(extractedStationId, neighborId);
@@ -251,17 +299,20 @@ public class Network {
 						double newDistance = distances.get(extractedStationId) + edge.getWeight();
 						
 						if(newDistance < currentDistance) {
-							queue.add(neighborId);
+							queue.add(new SimpleEntry(newDistance, neighborId));
 							distances.put(neighborId, newDistance);
+							List<Integer> newPath = new ArrayList<Integer>();
+							pathes.remove(distances.get(currentPath.get(currentPath.size()-1)));
+							newPath.addAll(currentPath);
+							newPath.add(neighborId);
+							pathes.put(newDistance, newPath);
 						}
 					}
-					if(neighborId==dest) {
-						return distances.get(dest);
-					}
+					
 				}
 			}
 		}
-		return -1;
+		return null;
 	}
 	
 	public ArrayList<Integer> diameter() {
@@ -294,6 +345,28 @@ public class Network {
 		}
 		System.out.println();
 		System.out.println("The diameter of the graph is " + diameter.size());
+	}
+	
+	public void prettyPrintPath(List<Integer> res) {
+		int tmp = res.get(res.size()-1);
+		res.remove(res.size()-1);
+		for(int stationId : res) {
+			Station s = getStation(stationId);
+			System.out.print(s.getName() + " -> ");
+		}
+		System.out.print(getStation(tmp).getName() + "\n");
+	}
+	
+	static class PairComparator implements Comparator {
+		
+		public int compare(Object o2, Object o1) {
+			// This method must return an int. As we manipulate Double instead, we have to make an approximation before
+			// comparing each number.
+			Double d1 = (Double) ((SimpleEntry) o1).getKey();
+			Double d2 = (Double) ((SimpleEntry) o2).getKey();
+			Double res = (d1 - d2)*1000000000;
+			return res.intValue();
+		}
 	}
 
 }

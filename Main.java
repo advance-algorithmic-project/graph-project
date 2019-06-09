@@ -9,15 +9,19 @@ public class Main {
 	public static void main(String[] args) {
 		Network paris = GTFS();
 		paris.writeToJson();
-		System.out.println(paris.getStation(2035).getName());
-		System.out.println(paris.getStation(1642).getName());
-		System.out.println(paris.djikstra(2035, 1642));
-		
 		//Network paris = new Network(new File("stations.json"), new File("edges.json"));
 		System.out.println("Finished!");
 		
-		//System.out.println(paris.bfs(1996, 1976));
-		paris.printDiameter();
+		// Ligne10 test
+		paris.prettyPrintPath(paris.djikstra(2005, 2026));
+		paris.prettyPrintPath(paris.bfs(2026, 1817));
+		
+		// Ligne1 transit Ligne2
+		/*
+		paris.prettyPrintPath(paris.djikstra(2035, 1910));
+		paris.prettyPrintPath(paris.bfs(2035, 1910));
+		*/
+		//paris.printDiameter();
 	}
 	
 	
@@ -56,6 +60,7 @@ public class Main {
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_7b/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_8/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_9/stop_times.txt"));
+		//8433,,"Porte d'Auteuil","Route des Lacs - 75116",48.84822598041119,2.257698885660922,0,
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_10/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_11/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_12/stop_times.txt"));
