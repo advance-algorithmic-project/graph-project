@@ -109,26 +109,6 @@ public class Network {
 			e.printStackTrace();
 		}
 	}
-
-
-	private List<Station> deleteDuplicates(List<Station> listStations) {
-		List<String> stationNames = new ArrayList<String>();
-		for (int i = 0; i < listStations.size(); i++) {
-			String name = listStations.get(i).getName();
-			if (!stationNames.contains(name)) {
-				stationNames.add(name);
-			}
-		}
-		List<Station> tmp = new ArrayList<Station>();
-		for (int i = 0; i < stationNames.size(); i++) {
-			for (int j = 0; j < listStations.size(); j++) {
-				if (listStations.get(j).getName() == stationNames.get(i)) {
-					tmp.add(listStations.get(j));
-				}
-			}
-		}
-		return tmp;
-	}
 	
 	private boolean joinIdStationOnName(String stationName, int id) {
 		for(int i=0; i<this.stations.size() ; i++) {
@@ -193,51 +173,52 @@ public class Network {
 		for (Edge edge : this.edges) {
 			if (edge.getStation1_id() == stationId) {
 				neighbors.add(edge.getStation2_id());
-			}
-			if (edge.getStation2_id() == stationId) {
+			} else if (edge.getStation2_id() == stationId) {
 				neighbors.add(edge.getStation1_id());
 			}
 		}
 		return neighbors;
 	}
 	
-	public int bfs(int startId, int targetId) {
+	public ArrayList<Integer> bfs(int startId, int targetId) {
 		LinkedList<Integer> queue = new LinkedList<Integer>();
-		List<Pair> distances = new ArrayList<Pair>();
+		List<ArrayList<Integer>> distances = new ArrayList<ArrayList<Integer>>();
 		
 		queue.add(startId);
-		distances.add(new Pair(startId, 0));
-		
+		ArrayList<Integer> tmp = new ArrayList<Integer>();
+		tmp.add(startId);
+		distances.add(tmp);
 		while(!queue.isEmpty()) {
 			int currentId = queue.poll();
-			int currentDistance = -1;
-
-			for (int i = 0; i < distances.size(); i++) {
-				if(distances.get(i).getId() == currentId) {
-					currentDistance = distances.get(i).getDistance();
+			ArrayList<Integer> currentPath = new ArrayList<Integer>();
+			for (ArrayList<Integer> path : distances) {
+				if(path.get(path.size() - 1) == currentId) {
+					currentPath = new ArrayList<Integer>(path);
 				}
 			}
 			for (int neighborId : this.neighbors(currentId)) {
 				
 				if (neighborId == targetId) {
-					return currentDistance + 1;
+					currentPath.add(neighborId);
+					return currentPath;
 				}
 				//Cherche si la station a déjà été visitée
 				boolean visited = false;
-				for (int i = 0; i < distances.size(); i++) {
-					if (distances.get(i).getId() == neighborId) {
+				for (ArrayList<Integer> path : distances) {
+					if (path.get(path.size() - 1) == neighborId) {
 						visited = true;
 						break;
 					}
 				}
 				if (visited == false) {
-					distances.add(new Pair(neighborId, currentDistance + 1));
+					ArrayList<Integer> newPath = new ArrayList<Integer>(currentPath);
+					newPath.add(neighborId);
+					distances.add(newPath);
 					queue.add(neighborId);
 				}
 			}
 		}
-		return -1;
-		
+		return new ArrayList<Integer>();
 	}
 	
 	public double djikstra(int start, int dest) {
@@ -283,20 +264,36 @@ public class Network {
 		return -1;
 	}
 	
-	public int diameter() {
+	public ArrayList<Integer> diameter() {
 		int diameter = -1;
+		ArrayList<Integer> diameterPath = new ArrayList<Integer>();
 		for (int i = 0; i < this.stations.size(); i++) {
 			for (int j = 0; j < this.stations.size(); j++) {
 				if (i != j) {
-
-					int distance = this.bfs(this.stations.get(i).getId(), this.stations.get(j).getId());
+					ArrayList<Integer> path = this.bfs(this.stations.get(i).getId(), this.stations.get(j).getId());
+					int distance = path.size();
 					if (distance > diameter) {
 						diameter = distance;
+						diameterPath = path;
 					}
 				}
 			}
 		}
-		return diameter;
+		return diameterPath;
+	}
+	
+	public void printDiameter() {
+		System.out.println("Searching for diameter");
+		ArrayList<Integer> diameter = this.diameter();
+		System.out.println("This network's diameter is made of these stations : ");
+		
+		for (int stationId : diameter) {
+			String stationName = this.getStation(stationId).getName();
+			System.out.print(stationName);
+			System.out.print(", ");
+		}
+		System.out.println();
+		System.out.println("The diameter of the graph is " + diameter.size());
 	}
 
 }
