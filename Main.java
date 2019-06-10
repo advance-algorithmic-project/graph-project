@@ -17,20 +17,22 @@ public class Main {
 		paris.prettyPrintPath(paris.djikstra(1747, 1744));
 		paris.prettyPrintPath(paris.bfs(1747, 1744));
 		*/
-		
+				
 		// Ligne10 test
 		/*
 		paris.prettyPrintPath(paris.djikstra(2026, 1817));
 		paris.prettyPrintPath(paris.bfs(2026, 1817));
-		*/
+		 */
 		
 		// Ligne1 transit Ligne2
 		/*
 		paris.prettyPrintPath(paris.djikstra(2035, 1910));
 		paris.prettyPrintPath(paris.bfs(2035, 1910));
 		*/
-		
+		//System.out.println(paris.bfs(2026, 1816));
 		//paris.printDiameter();
+		//System.out.println(paris.isConnected());
+		Network.fullClustering(paris, 8);
 	}
 	
 	

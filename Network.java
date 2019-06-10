@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.Collections;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -35,14 +36,14 @@ public class Network {
 			System.out.println("Reading stops file...");
 			for(File file : stationFile) {
 				System.out.println(file);
-				String line = String.valueOf(file).replaceAll("_","");
-				line = line.replaceAll("RATPGTFS", "");
-				line = line.split("\\\\")[1];
+				//String line = String.valueOf(file).replaceAll("_","");
+				//line = line.replaceAll("RATPGTFS", "");
+				//line = line.split("\\\\")[1];
 				filereader = new FileReader(file);
 				csvReader = new CSVReader(filereader, ',', '\"', 1);
 				while ((nextRecord = csvReader.readNext()) != null) {
 					int id = Integer.parseInt(nextRecord[0]);
-					String name = nextRecord[2] + " [" + line + "]";
+					String name = nextRecord[2]; //+ " [" + line + "]";
 					double lat = Double.parseDouble(nextRecord[4]);
 					double lon = Double.parseDouble(nextRecord[5]);
 					if(!(name.toUpperCase() == name)&&!(joinIdStationOnName(name, id))){
@@ -94,7 +95,7 @@ public class Network {
 									listEdges.add(new Edge(lastStation.getId(), station.getId(), weight));
 								}
 								// METRO 10
-								// 
+								//
 								else {
 									listEdges.add(new Edge(lastStation.getId(), station.getId(), weight));
 									listEdges.add(new Edge(station.getId(), lastStation.getId(), weight));
@@ -146,6 +147,32 @@ public class Network {
 		}
 	}
 	
+	public Network() {
+		this.stations = new ArrayList<Station>();
+		this.edges = new ArrayList<Edge>();
+	}
+	
+	public Network(Network network) {
+		this.stations = new ArrayList<Station>(network.stations);
+		this.edges = new ArrayList<Edge>(network.edges);
+	}
+	
+	public List<Station> getStations() {
+		return stations;
+	}
+
+	public void setStations(List<Station> stations) {
+		this.stations = stations;
+	}
+
+	public List<Edge> getEdges() {
+		return edges;
+	}
+
+	public void setEdges(List<Edge> edges) {
+		this.edges = edges;
+	}
+
 	private boolean joinIdStationOnName(String stationName, int id) {
 		for(int i=0; i<this.stations.size() ; i++) {
 			if(stationName.equals(this.stations.get(i).getName())) {
@@ -224,7 +251,7 @@ public class Network {
 		return neighbors;
 	}
 	
-	public ArrayList<Integer> bfs(int startId, int targetId) {
+	public List<ArrayList<Integer>> bfs(int startId) {
 		LinkedList<Integer> queue = new LinkedList<Integer>();
 		List<ArrayList<Integer>> distances = new ArrayList<ArrayList<Integer>>();
 		
@@ -241,11 +268,6 @@ public class Network {
 				}
 			}
 			for (int neighborId : this.neighbors(currentId)) {
-				
-				if (neighborId == targetId) {
-					currentPath.add(neighborId);
-					return currentPath;
-				}
 				//Cherche si la station a déjà été visitée
 				boolean visited = false;
 				for (ArrayList<Integer> path : distances) {
@@ -260,6 +282,17 @@ public class Network {
 					distances.add(newPath);
 					queue.add(neighborId);
 				}
+			}
+		}
+		return distances;
+	}
+	
+	public ArrayList<Integer> bfs(int startId, int targetId) {
+		List<ArrayList<Integer>> distances = this.bfs(startId);
+		
+		for (ArrayList<Integer> path : distances) {
+			if(path.get(path.size() - 1) == targetId) {
+					return path;
 			}
 		}
 		return new ArrayList<Integer>();
@@ -321,19 +354,16 @@ public class Network {
 		}
 		return null;
 	}
-	
-	public ArrayList<Integer> diameter() {
+		
+	public ArrayList<Integer> bfsDiameter() {
 		int diameter = -1;
 		ArrayList<Integer> diameterPath = new ArrayList<Integer>();
-		for (int i = 0; i < this.stations.size(); i++) {
-			for (int j = 0; j < this.stations.size(); j++) {
-				if (i != j) {
-					ArrayList<Integer> path = this.bfs(this.stations.get(i).getId(), this.stations.get(j).getId());
-					int distance = path.size();
-					if (distance > diameter) {
-						diameter = distance;
-						diameterPath = path;
-					}
+		for (Station station : this.stations) {
+			for (ArrayList<Integer> path : this.bfs(station.getId())) {
+				int distance = path.size();
+				if (distance > diameter) {
+					diameter = distance;
+					diameterPath = path;
 				}
 			}
 		}
@@ -342,7 +372,7 @@ public class Network {
 	
 	public void printDiameter() {
 		System.out.println("Searching for diameter");
-		ArrayList<Integer> diameter = this.diameter();
+		ArrayList<Integer> diameter = this.bfsDiameter();
 		System.out.println("This network's diameter is made of these stations : ");
 		
 		for (int stationId : diameter) {
@@ -373,6 +403,121 @@ public class Network {
 			Double d2 = (Double) ((SimpleEntry) o2).getKey();
 			Double res = (d1 - d2)*1000000000;
 			return res.intValue();
+		}
+	}
+	
+	public boolean isConnected() {
+			
+		if (this.stations.size() == (this.bfs(this.stations.get(0).getId()).size())) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public static ArrayList<Network> identifyClusters(Network network) {
+		ArrayList<Integer> list = new ArrayList<Integer>();
+		for (ArrayList<Integer> path : network.bfs(network.stations.get(0).getId())) {
+			int id = path.get(path.size() - 1);
+			if (!list.contains(id)) {
+				list.add(id);
+			}
+		}
+		Network network2 = new Network();
+		Network network1 = new Network();
+		for (Station station : network.stations) {
+			if (list.contains(station.getId())) {
+				network2.stations.add(station);
+			} else {
+				network1.stations.add(station);
+			}
+		}
+		for (Edge edge : network.edges) {
+			for (Station station : network2.stations) {
+				if (edge.getStation1_id() == station.getId() || edge.getStation2_id() == station.getId()) {
+					network2.edges.add(edge);
+				} else {
+					network1.edges.add(edge);
+				}
+			}
+		}
+		
+		ArrayList<Network> networks = new ArrayList<Network>();
+		networks.add(network1);
+		networks.add(network2);
+		
+		return networks;
+		
+		
+	}
+	
+	public static ArrayList<Network> clustering(Network network) {
+		if (!network.isConnected()) {
+			return Network.identifyClusters(network);
+		}
+		
+		ArrayList<Integer> betweenness_count = new ArrayList<Integer>(Collections.nCopies(network.edges.size(), 0));
+		for (Station station : network.stations) {
+			for (ArrayList<Integer> path : network.bfs(station.getId())) {
+				for (int i = 0; i < path.size() - 1; i++) {
+					int fromId = path.get(i);
+					int toId = path.get(i + 1);
+					for(int j = 0; j < network.edges.size(); j++) {
+						Edge edge = network.edges.get(j);
+						if (edge.getStation1_id() == fromId && edge.getStation2_id() == toId) {
+							betweenness_count.set(j, betweenness_count.get(j)+1);
+						}
+					}
+				}
+			}
+		}
+
+		while(network.isConnected()) {
+			
+			int counter = 0;
+			int maxBn = 0;
+			int index = 0;
+			for (int num : betweenness_count){
+				if(maxBn < num){
+					maxBn = num;
+					index = counter;
+				}
+				counter++;
+			}
+			//System.out.println("The edge between \"" + network.getStation(network.edges.get(index).getStation1_id()).getName() + "\" and \"" + network.getStation(network.edges.get(index).getStation2_id()).getName() + "\" has been deleted");
+			network.edges.remove(index);
+			betweenness_count.remove(index);
+		}
+		
+		return Network.identifyClusters(network);
+	}
+	
+	public static void fullClustering(Network network, int clusterNb) {
+		int counter = 2;
+		ArrayList<Network> clusters = Network.clustering(network);
+		while (counter < clusterNb) {
+			int counter2 = 0;
+			int nbStation = 0;
+			int index = 0;
+			for (Network net : clusters){
+				if (nbStation < net.getStations().size()){
+					nbStation = net.getStations().size();
+					index = counter2;
+				}
+				counter2++;
+			}
+			ArrayList<Network> newNetworks = Network.clustering(clusters.get(index));
+			clusters.remove(index);
+			clusters.add(newNetworks.get(0));
+			clusters.add(newNetworks.get(1));
+			counter++;
+		}
+		
+		for (Network cluster : clusters) {
+			System.out.println("Ce cluster est composé de ces stations :");
+			for (Station station : cluster.getStations()) {
+				System.out.println(station.getName());
+			}
 		}
 	}
 
