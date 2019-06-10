@@ -84,10 +84,17 @@ public class Network {
 							double weight = Math.sqrt(Math.pow(station.getLatitude()-lastStation.getLatitude(), 2) +
 									Math.pow(station.getLongitude()-lastStation.getLongitude(), 2));
 							if(!present) {
-								if(Arrays.asList(1818, 1817, 2346, 2004, 2193,
-										2256, 2354, 1903, 2299, 2026).contains(station_id)) {
+								// METRO 10
+								// Mirabeau, Michel-Ange-Molitor, Porte d'Auteuil,
+								// Eglise d'Auteuil, Michel-Ange-Auteuil, Chardon-Lagache9
+								// ||
+								// Boulogne Jean Jaurès, Javel-André Citroën && Porte d'Auteuil, Mirabeau
+								if((Arrays.asList(1818, 1817, 2346, 2256, 2354, 2026).contains(station_id)) ||
+									(Arrays.asList(2004, 2193, 1903, 2299).contains(station_id) && Arrays.asList(2346, 1818).contains(lastStation.getId()))) {
 									listEdges.add(new Edge(lastStation.getId(), station.getId(), weight));
 								}
+								// METRO 10
+								// 
 								else {
 									listEdges.add(new Edge(lastStation.getId(), station.getId(), weight));
 									listEdges.add(new Edge(station.getId(), lastStation.getId(), weight));
