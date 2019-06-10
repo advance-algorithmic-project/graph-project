@@ -12,27 +12,27 @@ public class Main {
 		//Network paris = new Network(new File("stations.json"), new File("edges.json"));
 		System.out.println("Finished!");
 		
+		paris.diameterDjikstra();
+		
 		// Long trajet
 		/*
 		paris.prettyPrintPath(paris.djikstra(1747, 1744));
 		paris.prettyPrintPath(paris.bfs(1747, 1744));
 		*/
-				
+		
 		// Ligne10 test
 		/*
 		paris.prettyPrintPath(paris.djikstra(2026, 1817));
 		paris.prettyPrintPath(paris.bfs(2026, 1817));
-		 */
+		*/
 		
 		// Ligne1 transit Ligne2
 		/*
 		paris.prettyPrintPath(paris.djikstra(2035, 1910));
 		paris.prettyPrintPath(paris.bfs(2035, 1910));
 		*/
-		//System.out.println(paris.bfs(2026, 1816));
+		
 		//paris.printDiameter();
-		//System.out.println(paris.isConnected());
-		Network.fullClustering(paris, 8);
 	}
 	
 	
@@ -54,7 +54,7 @@ public class Main {
 		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_12/stops.txt"));
 		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_13/stops.txt"));
 		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_14/stops.txt"));
-		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_Fun/stops.txt"));
+		//stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_Fun/stops.txt"));
 		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_Orv/stops.txt"));
 		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_RER_A/stops.txt"));
 		stopsFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_RER_B/stops.txt"));
@@ -77,7 +77,7 @@ public class Main {
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_12/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_13/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_14/stop_times.txt"));
-		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_Fun/stop_times.txt"));
+		//lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_Fun/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_METRO_Orv/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_RER_A/stop_times.txt"));
 		lineFiles.add(new File("RATP_GTFS_LINES/RATP_GTFS_RER_B/stop_times.txt"));

@@ -6,13 +6,15 @@ import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
-import java.util.Collections;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -36,14 +38,14 @@ public class Network {
 			System.out.println("Reading stops file...");
 			for(File file : stationFile) {
 				System.out.println(file);
-				//String line = String.valueOf(file).replaceAll("_","");
-				//line = line.replaceAll("RATPGTFS", "");
-				//line = line.split("\\\\")[1];
+				String line = String.valueOf(file).replaceAll("_","");
+				line = line.replaceAll("RATPGTFS", "");
+				line = line.split("\\\\")[1];
 				filereader = new FileReader(file);
 				csvReader = new CSVReader(filereader, ',', '\"', 1);
 				while ((nextRecord = csvReader.readNext()) != null) {
 					int id = Integer.parseInt(nextRecord[0]);
-					String name = nextRecord[2]; //+ " [" + line + "]";
+					String name = nextRecord[2] + " [" + line + "]";
 					double lat = Double.parseDouble(nextRecord[4]);
 					double lon = Double.parseDouble(nextRecord[5]);
 					if(!(name.toUpperCase() == name)&&!(joinIdStationOnName(name, id))){
@@ -95,7 +97,7 @@ public class Network {
 									listEdges.add(new Edge(lastStation.getId(), station.getId(), weight));
 								}
 								// METRO 10
-								//
+								// 
 								else {
 									listEdges.add(new Edge(lastStation.getId(), station.getId(), weight));
 									listEdges.add(new Edge(station.getId(), lastStation.getId(), weight));
@@ -147,32 +149,6 @@ public class Network {
 		}
 	}
 	
-	public Network() {
-		this.stations = new ArrayList<Station>();
-		this.edges = new ArrayList<Edge>();
-	}
-	
-	public Network(Network network) {
-		this.stations = new ArrayList<Station>(network.stations);
-		this.edges = new ArrayList<Edge>(network.edges);
-	}
-	
-	public List<Station> getStations() {
-		return stations;
-	}
-
-	public void setStations(List<Station> stations) {
-		this.stations = stations;
-	}
-
-	public List<Edge> getEdges() {
-		return edges;
-	}
-
-	public void setEdges(List<Edge> edges) {
-		this.edges = edges;
-	}
-
 	private boolean joinIdStationOnName(String stationName, int id) {
 		for(int i=0; i<this.stations.size() ; i++) {
 			if(stationName.equals(this.stations.get(i).getName())) {
@@ -251,7 +227,7 @@ public class Network {
 		return neighbors;
 	}
 	
-	public List<ArrayList<Integer>> bfs(int startId) {
+	public ArrayList<Integer> bfs(int startId, int targetId) {
 		LinkedList<Integer> queue = new LinkedList<Integer>();
 		List<ArrayList<Integer>> distances = new ArrayList<ArrayList<Integer>>();
 		
@@ -268,6 +244,11 @@ public class Network {
 				}
 			}
 			for (int neighborId : this.neighbors(currentId)) {
+				
+				if (neighborId == targetId) {
+					currentPath.add(neighborId);
+					return currentPath;
+				}
 				//Cherche si la station a déjà été visitée
 				boolean visited = false;
 				for (ArrayList<Integer> path : distances) {
@@ -282,17 +263,6 @@ public class Network {
 					distances.add(newPath);
 					queue.add(neighborId);
 				}
-			}
-		}
-		return distances;
-	}
-	
-	public ArrayList<Integer> bfs(int startId, int targetId) {
-		List<ArrayList<Integer>> distances = this.bfs(startId);
-		
-		for (ArrayList<Integer> path : distances) {
-			if(path.get(path.size() - 1) == targetId) {
-					return path;
 			}
 		}
 		return new ArrayList<Integer>();
@@ -348,31 +318,114 @@ public class Network {
 							pathes.put(newDistance, newPath);
 						}
 					}
-					
 				}
 			}
 		}
+		System.out.println("Djikstra: No path found for start: " + start + " |  dest: " + dest);
 		return null;
 	}
+	
+	private HashMap<Double, List> djikstraForDiameter(int start, int dest) {
+		HashSet<Integer> unvisitedIds = new HashSet<Integer>();
+		for(int i=0; i<this.stations.size(); i++) {
+			unvisitedIds.add(this.stations.get(i).getId());
+		}
 		
-	public ArrayList<Integer> bfsDiameter() {
+		HashMap<Integer, Double> distances = new HashMap<Integer, Double>();
+		for(int i=0; i<this.stations.size(); i++) {
+			distances.put(this.stations.get(i).getId(), Double.MAX_VALUE);
+		}
+		distances.put(start, 0.0);
+		
+		TreeSet queue = new TreeSet(new PairComparator());
+		queue.add(new SimpleEntry(distances.get(start), start));
+		
+		HashMap<Double, List<Integer>> pathes = new HashMap<Double, List<Integer>>();
+		List<Integer> firstList = new ArrayList<Integer>();
+		firstList.add(start);
+		pathes.put(0.0, firstList);
+		
+		while(!queue.isEmpty()) {
+			SimpleEntry extractedPair = (SimpleEntry) queue.pollFirst();
+			int extractedStationId = (Integer) extractedPair.getValue();
+			
+			List<Integer> currentPath = pathes.get(distances.get(extractedStationId));
+			
+			if(unvisitedIds.contains(extractedStationId)) {
+				unvisitedIds.remove(extractedStationId);
+				
+				if(!unvisitedIds.contains(dest)) {
+					HashMap<Double, List> res = new HashMap<Double, List>();
+					res.put(distances.get(dest), pathes.get(distances.get(dest)));
+					return res;
+					//return pathes.get(distances.get(dest));
+				}
+				
+				for(int neighborId : this.neighbors(extractedStationId)) {
+					Edge edge = getEdge(extractedStationId, neighborId);
+					
+					if(unvisitedIds.contains(neighborId)) {
+						double currentDistance = distances.get(neighborId);
+						double newDistance = distances.get(extractedStationId) + edge.getWeight();
+						
+						if(newDistance < currentDistance) {
+							queue.add(new SimpleEntry(newDistance, neighborId));
+							distances.put(neighborId, newDistance);
+							List<Integer> newPath = new ArrayList<Integer>();
+							pathes.remove(distances.get(currentPath.get(currentPath.size()-1)));
+							newPath.addAll(currentPath);
+							newPath.add(neighborId);
+							pathes.put(newDistance, newPath);
+						}
+					}
+				}
+			}
+		}
+		System.out.println("Djikstra: No path found for start: " + start + " |  dest: " + dest);
+		return null;
+	}
+	
+	public ArrayList<Integer> diameter() {
 		int diameter = -1;
 		ArrayList<Integer> diameterPath = new ArrayList<Integer>();
-		for (Station station : this.stations) {
-			for (ArrayList<Integer> path : this.bfs(station.getId())) {
-				int distance = path.size();
-				if (distance > diameter) {
-					diameter = distance;
-					diameterPath = path;
+		for (int i = 0; i < this.stations.size(); i++) {
+			for (int j = 0; j < this.stations.size(); j++) {
+				if (i != j) {
+					ArrayList<Integer> path = this.bfs(this.stations.get(i).getId(), this.stations.get(j).getId());
+					int distance = path.size();
+					if (distance > diameter) {
+						diameter = distance;
+						diameterPath = path;
+					}
 				}
 			}
 		}
 		return diameterPath;
 	}
 	
+	public void diameterDjikstra() {
+		double diameter = -1;
+		ArrayList<Integer> diameterPath = new ArrayList<Integer>();
+		for(int i=0; i<this.stations.size(); i++) {
+			for (int j = 0; j < this.stations.size(); j++) {
+				if(i!=j) {
+					HashMap tmp = this.djikstraForDiameter(this.stations.get(i).getId(), this.stations.get(j).getId());
+					Double distance = (Double) tmp.keySet().toArray()[0];
+					List path = (List) tmp.values().toArray()[0];
+					if(distance>diameter) {
+						diameter = distance;
+						diameterPath = (ArrayList<Integer>) path;
+					}
+				}
+			}
+		}
+		System.out.println("Diameter: " + diameter);
+		System.out.println("Path: " + diameterPath);
+	}
+	
 	public void printDiameter() {
 		System.out.println("Searching for diameter");
-		ArrayList<Integer> diameter = this.bfsDiameter();
+		ArrayList<Integer> diameter = this.diameter();
 		System.out.println("This network's diameter is made of these stations : ");
 		
 		for (int stationId : diameter) {
@@ -403,121 +456,6 @@ public class Network {
 			Double d2 = (Double) ((SimpleEntry) o2).getKey();
 			Double res = (d1 - d2)*1000000000;
 			return res.intValue();
-		}
-	}
-	
-	public boolean isConnected() {
-			
-		if (this.stations.size() == (this.bfs(this.stations.get(0).getId()).size())) {
-			return true;
-		}
-		
-		return false;
-	}
-	
-	public static ArrayList<Network> identifyClusters(Network network) {
-		ArrayList<Integer> list = new ArrayList<Integer>();
-		for (ArrayList<Integer> path : network.bfs(network.stations.get(0).getId())) {
-			int id = path.get(path.size() - 1);
-			if (!list.contains(id)) {
-				list.add(id);
-			}
-		}
-		Network network2 = new Network();
-		Network network1 = new Network();
-		for (Station station : network.stations) {
-			if (list.contains(station.getId())) {
-				network2.stations.add(station);
-			} else {
-				network1.stations.add(station);
-			}
-		}
-		for (Edge edge : network.edges) {
-			for (Station station : network2.stations) {
-				if (edge.getStation1_id() == station.getId() || edge.getStation2_id() == station.getId()) {
-					network2.edges.add(edge);
-				} else {
-					network1.edges.add(edge);
-				}
-			}
-		}
-		
-		ArrayList<Network> networks = new ArrayList<Network>();
-		networks.add(network1);
-		networks.add(network2);
-		
-		return networks;
-		
-		
-	}
-	
-	public static ArrayList<Network> clustering(Network network) {
-		if (!network.isConnected()) {
-			return Network.identifyClusters(network);
-		}
-		
-		ArrayList<Integer> betweenness_count = new ArrayList<Integer>(Collections.nCopies(network.edges.size(), 0));
-		for (Station station : network.stations) {
-			for (ArrayList<Integer> path : network.bfs(station.getId())) {
-				for (int i = 0; i < path.size() - 1; i++) {
-					int fromId = path.get(i);
-					int toId = path.get(i + 1);
-					for(int j = 0; j < network.edges.size(); j++) {
-						Edge edge = network.edges.get(j);
-						if (edge.getStation1_id() == fromId && edge.getStation2_id() == toId) {
-							betweenness_count.set(j, betweenness_count.get(j)+1);
-						}
-					}
-				}
-			}
-		}
-
-		while(network.isConnected()) {
-			
-			int counter = 0;
-			int maxBn = 0;
-			int index = 0;
-			for (int num : betweenness_count){
-				if(maxBn < num){
-					maxBn = num;
-					index = counter;
-				}
-				counter++;
-			}
-			//System.out.println("The edge between \"" + network.getStation(network.edges.get(index).getStation1_id()).getName() + "\" and \"" + network.getStation(network.edges.get(index).getStation2_id()).getName() + "\" has been deleted");
-			network.edges.remove(index);
-			betweenness_count.remove(index);
-		}
-		
-		return Network.identifyClusters(network);
-	}
-	
-	public static void fullClustering(Network network, int clusterNb) {
-		int counter = 2;
-		ArrayList<Network> clusters = Network.clustering(network);
-		while (counter < clusterNb) {
-			int counter2 = 0;
-			int nbStation = 0;
-			int index = 0;
-			for (Network net : clusters){
-				if (nbStation < net.getStations().size()){
-					nbStation = net.getStations().size();
-					index = counter2;
-				}
-				counter2++;
-			}
-			ArrayList<Network> newNetworks = Network.clustering(clusters.get(index));
-			clusters.remove(index);
-			clusters.add(newNetworks.get(0));
-			clusters.add(newNetworks.get(1));
-			counter++;
-		}
-		
-		for (Network cluster : clusters) {
-			System.out.println("Ce cluster est composé de ces stations :");
-			for (Station station : cluster.getStations()) {
-				System.out.println(station.getName());
-			}
 		}
 	}
 
